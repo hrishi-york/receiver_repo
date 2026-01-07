@@ -26,6 +26,8 @@ def verify_signature(req):
 def webhook():
     verify_signature(request)
 
+    breakpoint()
+
     event = request.headers.get("X-GitHub-Event")
     delivery_id = request.headers.get("X-GitHub-Delivery")
     payload = request.get_json()
