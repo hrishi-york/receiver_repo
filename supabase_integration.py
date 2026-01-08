@@ -4,6 +4,9 @@ import hashlib
 from datetime import datetime
 from flask import Flask, request, abort, jsonify
 from supabase import create_client
+from dotenv import load_dotenv
+load_dotenv()
+
 
 app = Flask(__name__)
 
@@ -68,7 +71,7 @@ def webhook():
         return jsonify({"status": "no_commits"}), 200
 
     try:
-        supabase.table("github_repo_events").insert(rows).execute()
+        supabase.table("commits").insert(rows).execute()
     except Exception as e:
         error_msg = str(e).lower()
 
