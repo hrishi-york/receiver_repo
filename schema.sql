@@ -12,6 +12,12 @@ CREATE TABLE IF NOT EXISTS commits (
   ingested_at timestamptz NOT NULL DEFAULT now()
 );
 
+
+
+
+
+
+
 -- 2) Unique index to prevent duplicates by repo_name + commit_sha
 CREATE UNIQUE INDEX IF NOT EXISTS commits_repo_commit_sha_uniq_idx
   ON commits (repo_name, commit_sha);
