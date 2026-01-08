@@ -68,16 +68,20 @@ def webhook():
         return jsonify({"status": "no_commits"}), 200
 
     try:
-        supabase.table("github_repo_events") \
-            .insert(rows, on_conflict="repo_name,commit_sha") \
-            .execute()
+        supabase.table("github_repo_events").insert(rows).execute()
     except Exception as e:
-        # Do NOT crash webhook — GitHub will retry
-        print("Supabase insert failed:", str(e))
+        error_msg = str(e).lower()
+
+        if "duplicate key" in error_msg or "unique constraint" in error_msg:
+            # Idempotency working as intended
+            pass
+        else:
+            # Log real failures
+            print("Supabase insert failed:", e)
 
     return jsonify({
         "status": "received",
-        "inserted_attempted": len(rows)
+        "insert_attempted": len(rows)
     }), 200
 
 
