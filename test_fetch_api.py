@@ -9,7 +9,7 @@ from typing import Dict, List, Any, Optional
 # -----------------------------
 
 OWNER = "hrishi-york"
-REPO = "Netlify_Deployment"
+REPO = "remote_exmpl"
 
 BASE_URL = "https://api.github.com"
 PER_PAGE = 100
@@ -123,7 +123,7 @@ def fetch_all_deployments() -> List[Dict[str, Any]]:
 
 def write_deployments_to_json(
     deployments: list[dict],
-    file_path: str = "deployments_netlify.json"
+    file_path: str = "deployments_remote_exmpl.json"
 ) -> None:
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(deployments, f, indent=2, ensure_ascii=False)
