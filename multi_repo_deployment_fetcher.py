@@ -24,7 +24,7 @@ REPO_OWNER = "hrishi-york"
 # 👇 MULTIPLE REPOS HERE
 REPOSITORIES = [
     "remote_exmpl",
-    "Netlify_Deployment",
+    "Netlify_Deployment",   
 ]
 
 OUTPUT_FILE = "github_deployments_multi_repo.json"
