@@ -1,0 +1,85 @@
+############################################################
+# 1. START CLEAN (MAIN BRANCH)
+############################################################
+git checkout main
+git pull origin main
+
+
+############################################################
+# 2. FEATURE BRANCH 1 — MULTIPLE COMMITS
+#    (FOR REBASE + MERGE COMMIT)
+############################################################
+git checkout -b feature-rebase-merge
+
+echo "Feature A - part 1" >> fileA.txt
+git add fileA.txt
+git commit -m "feat(A): part 1"
+
+echo "Feature A - part 2" >> fileA.txt
+git add fileA.txt
+git commit -m "feat(A): part 2"
+
+echo "Feature A - fix" >> fileA.txt
+git add fileA.txt
+git commit -m "fix(A): small fix"
+
+
+############################################################
+# 3. REBASE FEATURE BRANCH ONTO MAIN
+############################################################
+git fetch origin
+git rebase origin/main
+
+
+############################################################
+# 4. MERGE USING REBASE + MERGE COMMIT
+#    (SIMULATES “REBASE AND MERGE” PR OPTION)
+############################################################
+git checkout main
+git merge --no-ff feature-rebase-merge
+
+git log --oneline --graph
+
+
+############################################################
+# 5. FEATURE BRANCH 2 — MULTIPLE COMMITS
+#    (FOR REBASE + SQUASH)
+############################################################
+git checkout -b feature-rebase-squash main
+
+echo "Feature B - step 1" >> fileB.txt
+git add fileB.txt
+git commit -m "feat(B): step 1"
+
+echo "Feature B - step 2" >> fileB.txt
+git add fileB.txt
+git commit -m "feat(B): step 2"
+
+echo "Feature B - cleanup" >> fileB.txt
+git add fileB.txt
+git commit -m "chore(B): cleanup"
+
+
+############################################################
+# 6. REBASE FEATURE BRANCH ONTO MAIN
+############################################################
+git fetch origin
+git rebase origin/main
+
+
+############################################################
+# 7. MERGE USING REBASE + SQUASH
+#    (SIMULATES “SQUASH AND MERGE” PR OPTION)
+############################################################
+git checkout main
+git merge --squash feature-rebase-squash
+git commit -m "feat(B): complete feature B"
+
+git log --oneline --graph
+
+
+############################################################
+# 8. CLEANUP (OPTIONAL)
+############################################################
+git branch -d feature-rebase-merge
+git branch -d feature-rebase-squash
