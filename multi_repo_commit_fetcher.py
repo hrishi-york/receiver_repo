@@ -23,7 +23,8 @@ REPO_OWNER = "hrishi-york"
 
 REPOSITORIES = [
     "remote_exmpl",
-    "receiver_repo"
+    "receiver_repo",
+    "experimental_1",
 ]
 
 OUTPUT_FILE = "github_commits_branch_aware.json"
@@ -35,7 +36,7 @@ TIMEOUT = 10
 HEADERS = {
     "Authorization": f"token {ACCESS_TOKEN}",
     "Accept": "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28"
+    "X-GitHub-Api-Version": "2022-11-28",
 }
 
 session = requests.Session()
@@ -45,10 +46,8 @@ session.headers.update(HEADERS)
 # CORE HTTP HELPER
 # -----------------------------
 
-def github_get(
-    url: str,
-    params: Optional[Dict[str, Any]] = None
-) -> Any:
+
+def github_get(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
     r = session.get(url, params=params, timeout=TIMEOUT)
 
     if r.status_code == 404:
@@ -60,9 +59,11 @@ def github_get(
     r.raise_for_status()
     return r.json()
 
+
 # -----------------------------
 # FETCH BRANCHES
 # -----------------------------
+
 
 def fetch_branches(repo_name: str) -> List[str]:
     data = github_get(f"{BASE_URL}/{REPO_OWNER}/{repo_name}/branches")
@@ -74,13 +75,14 @@ def fetch_branches(repo_name: str) -> List[str]:
     branches: List[str] = [b["name"] for b in data]
     return branches
 
+
 # -----------------------------
 # FETCH COMMITS PER BRANCH
 # -----------------------------
 
+
 def fetch_commits_for_repo_and_branch(
-    repo_name: str,
-    branch: str
+    repo_name: str, branch: str
 ) -> List[Dict[str, Any]]:
 
     page = 1
@@ -89,40 +91,41 @@ def fetch_commits_for_repo_and_branch(
     while True:
         commits = github_get(
             f"{BASE_URL}/{REPO_OWNER}/{repo_name}/commits",
-            params={
-                "sha": branch,
-                "per_page": PER_PAGE,
-                "page": page
-            }
+            params={"sha": branch, "per_page": PER_PAGE, "page": page},
         )
 
         if not commits:
             break
 
         for c in commits:
-            records.append({
-                "event_type": "commit",
-                "commit_sha": c["sha"],
-                "commit_timestamp": c["commit"]["author"]["date"],
-                "repo_owner": REPO_OWNER,
-                "repo_name": repo_name,
-                "branch": branch,
-                "author": c["commit"]["author"]["name"].strip("“”\"'"),
-                "author_email": c["commit"]["author"]["email"],
-                "ingested_at": datetime.now(timezone.utc).isoformat()
-            })
+            records.append(
+                {
+                    "event_type": "commit",
+                    "commit_sha": c["sha"],
+                    "commit_timestamp": c["commit"]["author"]["date"],
+                    "repo_owner": REPO_OWNER,
+                    "repo_name": repo_name,
+                    "branch": branch,
+                    "author": c["commit"]["author"]["name"].strip("“”\"'"),
+                    "author_email": c["commit"]["author"]["email"],
+                    "ingested_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
 
         page += 1
 
     return records
 
+
 # -----------------------------
 # WRITE JSON
 # -----------------------------
 
+
 def write_to_json(records: List[Dict[str, Any]]) -> None:
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(records, f, indent=2)
+
 
 # -----------------------------
 # MAIN
