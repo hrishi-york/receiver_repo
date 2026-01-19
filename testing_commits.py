@@ -1,9 +1,8 @@
-'''
-Here in this file, testing commits with another git repo 
-'''
+"""
+Here in this file, testing commits with another git repo
+"""
 
-
-# data is returning but the branch is unknown, in this code 
+# data is returning but the branch is unknown, in this code
 
 import os
 import json
@@ -21,7 +20,7 @@ OUTPUT_FILE = "commits_remote_exmpl.json"
 HEADERS = {
     "Authorization": f"Bearer {ACCESS_TOKEN}",
     "Accept": "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28"
+    "X-GitHub-Api-Version": "2022-11-28",
 }
 
 BASE_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}"
@@ -34,10 +33,7 @@ def fetch_all_commits():
 
     while True:
         url = f"{BASE_URL}/commits"
-        params = {
-            "per_page": per_page,
-            "page": page
-        }
+        params = {"per_page": per_page, "page": page}
 
         response = requests.get(url, headers=HEADERS, params=params)
 
@@ -58,7 +54,7 @@ def fetch_all_commits():
                 "author": c["commit"]["author"]["name"].strip("“”\"'"),
                 "author_email": c["commit"]["author"]["email"],
                 "branch": "unknown",
-                "ingested_at": datetime.now(timezone.utc).isoformat()
+                "ingested_at": datetime.now(timezone.utc).isoformat(),
             }
 
             all_records.append(record)
