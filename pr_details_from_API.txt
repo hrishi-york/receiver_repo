@@ -1,6 +1,6 @@
 
 
- Pull Request Object — Top-Level Fields
+Pull Request Object — Top-Level Fields
 
 Returned by:
 
