@@ -1,0 +1,189 @@
+
+
+ Pull Request Object — Top-Level Fields
+
+Returned by:
+
+GET
+/repos/{owner}/{repo}/pulls/{pull_number}
+
+---
+
+ Identity & Metadata
+
+• id
+• node_id
+• number
+• state
+• title
+• body
+• html_url
+• url
+• issue_url
+• statuses_url
+
+---
+
+ Author Information
+
+• user.login
+• user.id
+• user.type
+• user.html_url
+
+---
+
+ Timestamps (Critical for PR Activity)
+
+• created_at
+• updated_at
+• closed_at
+• merged_at
+
+---
+
+ Merge Information
+
+• merged
+• mergeable
+• mergeable_state
+• merged_by.login
+• merge_commit_sha
+• rebaseable
+
+---
+
+ Branch & Commit References
+
+• head.ref
+• head.sha
+• head.repo.full_name
+
+• base.ref
+• base.sha
+• base.repo.full_name
+
+---
+
+ Change Statistics
+
+• commits
+• additions
+• deletions
+• changed_files
+
+---
+
+ PR State Flags
+
+• draft
+• locked
+• maintainer_can_modify
+
+---
+
+ Labels & Assignment
+
+• labels[].name
+• assignees[].login
+• requested_reviewers[].login
+• requested_teams[].name
+• milestone.title
+
+---
+
+ Merge Configuration
+
+• auto_merge
+• allow_merge_commit
+• allow_squash_merge
+• allow_rebase_merge
+
+---
+
+ Review Data (Separate Endpoint)
+
+GET
+/repos/{owner}/{repo}/pulls/{pull_number}/reviews
+
+Fields returned:
+
+• id
+• user.login
+• state
+• submitted_at
+• body
+• commit_id
+
+---
+
+ Review Comments (Inline)
+
+GET
+/repos/{owner}/{repo}/pulls/{pull_number}/comments
+
+Fields:
+
+• id
+• user.login
+• body
+• path
+• position
+• created_at
+
+---
+
+ Issue Events (Timeline)
+
+GET
+/repos/{owner}/{repo}/issues/{issue_number}/events
+
+Events include:
+
+• opened
+• closed
+• reopened
+• merged
+• review_requested
+• labeled
+• unlabeled
+• assigned
+
+Each event includes:
+
+• event
+• actor.login
+• created_at
+
+---
+
+ Commit Data (PR Scope)
+
+GET
+/repos/{owner}/{repo}/pulls/{pull_number}/commits
+
+Fields:
+
+• sha
+• commit.author.date
+• commit.committer.date
+• commit.message
+• author.login
+
+
+
+ Minimal Field Set for PR Activity Tracking
+
+If your goal is PR analytics or DORA metrics, you only need:
+
+• created_at
+• merged_at
+• closed_at
+• state
+• merged
+• commits
+• additions
+• deletions
+• reviews[].submitted_at
+• events[].created_at
+
