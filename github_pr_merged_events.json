@@ -98,13 +98,13 @@
     "ingested_at": "2026-01-19T10:50:27.558619+00:00"
   },
   {
-    "pr_id": "PR_kwDOQ6SpYM6-JQ4P",
+    "pr_id": 3190099471,
     "pr_number": 7,
     "source_branch": "feature-rebase-test",
     "source_sha": "b3dff065189c98faf273876421ea08ea4e3cf5ff",
     "target_branch": "main",
     "base_sha": "600597002940fec7ec70594c327114af428940aa",
-    "merge_type": "unknown",
+    "merge_type": "squash",
     "merge_commit_sha": "809870b6323b9b74e863b4675281e3596ab25cf0",
     "repo_owner": "hrishi-york",
     "repo_name": "experimental_1",
