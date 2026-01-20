@@ -1,12 +1,3 @@
-"""
-Incremental, append-safe PR ingestion (merged PRs only)
-Supports:
-- Multi-repo
-- Historical backfill
-- Incremental updates
-- Merge type detection
-"""
-
 import os
 import json
 import requests
@@ -17,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # -------------------------------------------------
-# CONFIG
+# Configuration
 # -------------------------------------------------
 
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
@@ -35,38 +26,42 @@ REPOSITORIES = [
 OUTPUT_FILE = "github_pr_merged_events.json"
 
 BASE_URL = "https://api.github.com"
+GRAPHQL_URL = "https://api.github.com/graphql"
+
 PER_PAGE = 100
 TIMEOUT = 10
 
 HEADERS = {
-    "Authorization": f"token {ACCESS_TOKEN}",
+    "Authorization": f"Bearer {ACCESS_TOKEN}",
     "Accept": "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28",
 }
 
 session = requests.Session()
 session.headers.update(HEADERS)
 
 # -------------------------------------------------
-# HTTP
+# REST + GraphQL helpers
 # -------------------------------------------------
 
 
 def github_get(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
     r = session.get(url, params=params, timeout=TIMEOUT)
+    r.raise_for_status()
+    return r.json()
 
-    if r.status_code == 401:
-        raise RuntimeError("Unauthorized")
 
-    if r.status_code == 404:
-        return None
-
+def github_graphql(query: str, variables: dict) -> dict:
+    r = session.post(
+        GRAPHQL_URL,
+        json={"query": query, "variables": variables},
+        timeout=TIMEOUT,
+    )
     r.raise_for_status()
     return r.json()
 
 
 # -------------------------------------------------
-# LOAD EXISTING DATA
+# Storage helpers
 # -------------------------------------------------
 
 
@@ -79,48 +74,96 @@ def load_existing_records() -> List[Dict[str, Any]]:
 
 def build_checkpoint(records: List[Dict[str, Any]]) -> Dict[str, str]:
     checkpoint = {}
-
     for r in records:
-        # Only process PR records
-        if "repo_name" not in r:
-            continue
-
-        # Skip records that don't have updated_at (old deployment records)
-        updated_at = r.get("updated_at")
-        if not updated_at:
-            continue
-
-        repo = r["repo_name"]
-
-        if repo not in checkpoint or updated_at > checkpoint[repo]:
-            checkpoint[repo] = updated_at
-
+        if "repo_name" in r and r.get("updated_at"):
+            repo = r["repo_name"]
+            if repo not in checkpoint or r["updated_at"] > checkpoint[repo]:
+                checkpoint[repo] = r["updated_at"]
     return checkpoint
 
 
 def existing_pr_ids(records: List[Dict[str, Any]]) -> set:
-    return {r["pr_id"] for r in records}
+    return {r["pr_id"] for r in records if "pr_id" in r}
 
 
 # -------------------------------------------------
-# MERGE TYPE INFERENCE
+# GraphQL query
+# -------------------------------------------------
+
+PR_GRAPHQL_QUERY = """
+query ($owner: String!, $repo: String!, $number: Int!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $number) {
+      id
+      number
+      createdAt
+      updatedAt
+      mergedAt
+
+      headRefName
+      baseRefName
+      baseRefOid
+
+      commits(first: 100) {
+        nodes {
+          commit {
+            oid
+            messageHeadline
+            authoredDate
+            committedDate
+            parents(first: 5) {
+              totalCount
+            }
+          }
+        }
+      }
+
+      mergeCommit {
+        oid
+        parents(first: 5) {
+          totalCount
+        }
+      }
+    }
+  }
+}
+"""
+
+
+# -------------------------------------------------
+# Merge type detection
 # -------------------------------------------------
 
 
-def infer_merge_type(pr: Dict[str, Any]) -> str:
-    if pr.get("merged_at") and pr.get("merge_commit_sha"):
-        if pr.get("commits", 0) > 1:
-            return "merge"
-        return "squash"
+def infer_merge_type_graphql(pr_data: Dict[str, Any]) -> str:
+    pr = pr_data["data"]["repository"]["pullRequest"]
 
-    if pr.get("merged_at"):
+    commits = pr["commits"]["nodes"]
+    merge_commit = pr.get("mergeCommit")
+
+    # Merge commit → multiple parents
+    if merge_commit and merge_commit["parents"]["totalCount"] >= 2:
+        return "merge"
+
+    # Squash → single commit with PR reference
+    if len(commits) == 1:
+        title = commits[0]["commit"]["messageHeadline"].lower()
+        if "pr #" in title or "pull request" in title or "#" in title:
+            return "squash"
+
+    # Rebase → multiple commits with differing timestamps
+    commit_times = {
+        (c["commit"]["authoredDate"], c["commit"]["committedDate"]) for c in commits
+    }
+
+    if len(commits) > 1 and len(commit_times) > 1:
         return "rebase"
 
     return "unknown"
 
 
 # -------------------------------------------------
-# FETCH PRs
+# REST PR fetch
 # -------------------------------------------------
 
 
@@ -154,7 +197,7 @@ def fetch_pull_requests(repo: str, since_ts: Optional[str]) -> List[Dict[str, An
 
 
 # -------------------------------------------------
-# MAIN
+# Main execution
 # -------------------------------------------------
 
 if __name__ == "__main__":
@@ -166,7 +209,7 @@ if __name__ == "__main__":
     new_events: List[Dict[str, Any]] = []
 
     for repo in REPOSITORIES:
-        print(f"\nFetching PRs for repo: {repo}")
+        print(f"Fetching PRs for {repo}")
 
         since_ts = checkpoint.get(repo)
         prs = fetch_pull_requests(repo, since_ts)
@@ -178,18 +221,33 @@ if __name__ == "__main__":
             if pr["id"] in seen_pr_ids:
                 continue
 
+            gql_data = github_graphql(
+                PR_GRAPHQL_QUERY,
+                {
+                    "owner": REPO_OWNER,
+                    "repo": repo,
+                    "number": pr["number"],
+                },
+            )
+
+            pr_node = gql_data["data"]["repository"]["pullRequest"]
+            commits = pr_node["commits"]["nodes"]
+            merge_commit = pr_node.get("mergeCommit")
+
             record = {
-                "pr_id": pr["id"],
-                "pr_number": pr["number"],
-                "source_branch": pr["head"]["ref"],
-                "target_branch": pr["base"]["ref"],
-                "merge_type": infer_merge_type(pr),
-                "merge_commit_sha": pr["merge_commit_sha"],
+                "pr_id": pr_node["id"],
+                "pr_number": pr_node["number"],
+                "source_branch": pr_node["headRefName"],
+                "source_sha": commits[-1]["commit"]["oid"] if commits else None,
+                "target_branch": pr_node["baseRefName"],
+                "base_sha": pr_node["baseRefOid"],
+                "merge_type": infer_merge_type_graphql(gql_data),
+                "merge_commit_sha": (merge_commit["oid"] if merge_commit else None),
                 "repo_owner": REPO_OWNER,
                 "repo_name": repo,
-                "created_at": pr["created_at"],
-                "updated_at": pr["updated_at"],
-                "merged_at": pr["merged_at"],
+                "created_at": pr_node["createdAt"],
+                "updated_at": pr_node["updatedAt"],
+                "merged_at": pr_node["mergedAt"],
                 "ingested_at": datetime.now(timezone.utc).isoformat(),
             }
 
@@ -201,9 +259,7 @@ if __name__ == "__main__":
         with open(OUTPUT_FILE, "w") as f:
             json.dump(all_records, f, indent=2)
 
-        print("\n-----------------------------------")
         print(f"New PRs ingested: {len(new_events)}")
         print(f"Total PRs stored: {len(all_records)}")
     else:
-        print("\n-----------------------------------")
         print("No new PRs found")
