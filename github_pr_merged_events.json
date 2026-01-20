@@ -96,5 +96,19 @@
     "updated_at": "2026-01-19T10:50:06Z",
     "merged_at": "2026-01-19T10:50:06Z",
     "ingested_at": "2026-01-19T10:50:27.558619+00:00"
+  },
+  {
+    "pr_id": 3190099471,
+    "pr_number": 7,
+    "source_branch": "feature-rebase-test",
+    "target_branch": "main",
+    "merge_type": "squash",
+    "merge_commit_sha": "809870b6323b9b74e863b4675281e3596ab25cf0",
+    "repo_owner": "hrishi-york",
+    "repo_name": "experimental_1",
+    "created_at": "2026-01-20T07:15:25Z",
+    "updated_at": "2026-01-20T07:26:47Z",
+    "merged_at": "2026-01-20T07:26:47Z",
+    "ingested_at": "2026-01-20T07:28:50.439381+00:00"
   }
 ]
